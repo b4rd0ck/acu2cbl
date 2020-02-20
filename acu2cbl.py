@@ -5,16 +5,25 @@ import sys
 # constants
 POS_MARK1_BEGIN_SOURCE = 6
 POS_MARK2_BEGIN_SOURCE = 7
+POS_MARK3_BEGIN_SOURCE = 8
+CNT_BYTES_FIRST_INIT_LINE = 3
+CNT_BYTES_FIRST_CNT_SPACES = 10
 
 nameFileObject = ""
 fileObject = ""
 byteFileObject = ""
 nthByte = -1
+nthByteSource = -1
 sourceLine = ""
 markBeginSource = ""
-hexValueAnt = ""
+hexValueAnt0 = ""
+hexValueAnt1 = ""
 hexValueAct = ""
 flagSource = 0
+flagFirstLineSource = 0
+markBeginLine = ""
+cnt_initial_spaces = 0
+lineSource = ""
 
 
 def printUsage():
@@ -45,35 +54,57 @@ def processArguments(argv):
 
 def processByte(hexValue):
     global nthByte
+    global nthByteSource
     global sourceLine
     global markBeginSource
-    global hexValueAnt
+    global hexValueAnt0
+    global hexValueAnt1
     global hexValueAct
     global flagSource
+    global flagFirstLineSource
+    global cnt_initial_spaces
+    global markBeginLine
+    global lineSource
 
     nthByte += 1
 
     # identify the beginning of the source
-    if nthByte == POS_MARK1_BEGIN_SOURCE or nthByte == POS_MARK2_BEGIN_SOURCE:
+    if nthByte == POS_MARK1_BEGIN_SOURCE or nthByte == POS_MARK2_BEGIN_SOURCE or nthByte == POS_MARK3_BEGIN_SOURCE:
         markBeginSource += hexValue
         return
 
-    hexValueAnt = hexValueAct
+    hexValueAnt0 = hexValueAnt1
+    hexValueAnt1 = hexValueAct
     hexValueAct = hexValue
-    if hexValueAnt == "8d" and hexValueAct == "6e":
-        print("aca")
-        print(markBeginSource[0:2])
-        print(markBeginSource[2:])
     # if the previous and the actual characters match with "markBeginSource" set the
     # flag "flagSource" to 1
-    if hexValueAnt == markBeginSource[0:2] and hexValueAct == markBeginSource[2:]:
+    if hexValueAnt0 == markBeginSource[0:2] and hexValueAnt1 == markBeginSource[2:4] and hexValueAct == markBeginSource[4:]:
         flagSource = 1
+        # initialize position of byte in the source
+        nthByteSource = -1
+        # indicate that next line is the first of the source
+        flagFirstLineSource = 1
         return
 
     # inside the part of the source
     if flagSource == 1:
+        # actual line is the first of the source
+        if flagFirstLineSource == 1:
+            nthByteSource += 1
+            if nthByteSource < CNT_BYTES_FIRST_INIT_LINE:
+                return
+            if nthByteSource == CNT_BYTES_FIRST_INIT_LINE:
+                markBeginLine = hexValue
+                return
+            if nthByteSource == CNT_BYTES_FIRST_CNT_SPACES:
+                cnt_initial_spaces = int(hexValue, 16)
+                return
+        if hexValue == markBeginLine:
+            print(lineSource)
+            flagFirstLineSource = 0
+
         intValue = int(hexValue, 16)
-        print(chr(intValue))
+        lineSource += chr(intValue)
 
 
 def main():
