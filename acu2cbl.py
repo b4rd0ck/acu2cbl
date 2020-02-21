@@ -14,6 +14,7 @@ fileObject = ""
 byteFileObject = ""
 nthByte = -1
 nthByteSource = -1
+nthByteTextSource = -1
 sourceLine = ""
 markBeginSource = ""
 hexValueAnt0 = ""
@@ -24,6 +25,8 @@ flagFirstLineSource = 0
 markBeginLine = ""
 cnt_initial_spaces = 0
 lineSource = ""
+lengthSource = 0
+flagTextSource = 0
 
 
 def printUsage():
@@ -65,6 +68,9 @@ def processByte(hexValue):
     global cnt_initial_spaces
     global markBeginLine
     global lineSource
+    global lengthSource
+    global flagTextSource
+    global nthByteTextSource
 
     nthByte += 1
 
@@ -76,7 +82,7 @@ def processByte(hexValue):
     hexValueAnt0 = hexValueAnt1
     hexValueAnt1 = hexValueAct
     hexValueAct = hexValue
-    # if the previous and the actual characters match with "markBeginSource" set the
+    # if the two previous and the actual characters match with "markBeginSource" set the
     # flag "flagSource" to 1
     if hexValueAnt0 == markBeginSource[0:2] and hexValueAnt1 == markBeginSource[2:4] and hexValueAct == markBeginSource[4:]:
         flagSource = 1
@@ -84,27 +90,40 @@ def processByte(hexValue):
         nthByteSource = -1
         # indicate that next line is the first of the source
         flagFirstLineSource = 1
+        #
+        nthByteTextSource = -1
         return
 
-    # inside the part of the source
+    # check if it inside the the source
     if flagSource == 1:
-        # actual line is the first of the source
+        nthByteSource += 1
+        nthByteTextSource += 1
+        # check if actual line is the first of the source
         if flagFirstLineSource == 1:
-            nthByteSource += 1
+            #nthByteSource += 1
+            # check if position is previous indicator's init first line
             if nthByteSource < CNT_BYTES_FIRST_INIT_LINE:
                 return
+            # check if position is equal indicator's init first line
             if nthByteSource == CNT_BYTES_FIRST_INIT_LINE:
                 markBeginLine = hexValue
+                lengthSource = int(hexValue, 16)
+                nthByteTextSource = 0
                 return
+            # check if position is equal indicator's count spaces
             if nthByteSource == CNT_BYTES_FIRST_CNT_SPACES:
                 cnt_initial_spaces = int(hexValue, 16)
+                flagTextSource = 1
                 return
-        if hexValue == markBeginLine:
+
+        if nthByteTextSource == lengthSource:
             print(lineSource)
+            lineSource = ""
             flagFirstLineSource = 0
 
-        intValue = int(hexValue, 16)
-        lineSource += chr(intValue)
+        if flagTextSource == 1:
+            intValue = int(hexValue, 16)
+            lineSource += chr(intValue)
 
 
 def main():
