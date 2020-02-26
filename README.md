@@ -8,6 +8,6 @@ sections and so on.
 
 Belown is shown the usage of the script:
 
-  python3 acu2cbl -o <object cobol> || --object=<object cobol>
+  python3 acu2cbl -o <object cobol> | --object=<object cobol>
 
 Actually, the source code resulting is printed to screen, enabling it to a file for later comparison.
