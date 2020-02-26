@@ -1,6 +1,7 @@
 import binascii
 import getopt
 import sys
+import re
 
 # constants
 POS_MARK1_BEGIN_SOURCE = 6
@@ -8,6 +9,7 @@ POS_MARK2_BEGIN_SOURCE = 7
 POS_MARK3_BEGIN_SOURCE = 8
 CNT_BYTES_FIRST_INIT_LINE = 3
 CNT_BYTES_FIRST_CNT_SPACES = 10
+CNT_BYTES_CNT_SPACES = 6
 
 nameFileObject = ""
 fileObject = ""
@@ -94,13 +96,14 @@ def processByte(hexValue):
         nthByteTextSource = -1
         return
 
-    # check if it inside the the source
+    # check if it is inside the the source
+    # nthByteSource == -1
+    # nthByteTextSource == -1
     if flagSource == 1:
         nthByteSource += 1
         nthByteTextSource += 1
         # check if actual line is the first of the source
         if flagFirstLineSource == 1:
-            #nthByteSource += 1
             # check if position is previous indicator's init first line
             if nthByteSource < CNT_BYTES_FIRST_INIT_LINE:
                 return
@@ -108,7 +111,7 @@ def processByte(hexValue):
             if nthByteSource == CNT_BYTES_FIRST_INIT_LINE:
                 markBeginLine = hexValue
                 lengthSource = int(hexValue, 16)
-                nthByteTextSource = 0
+                nthByteTextSource = -1
                 return
             # check if position is equal indicator's count spaces
             if nthByteSource == CNT_BYTES_FIRST_CNT_SPACES:
@@ -116,10 +119,27 @@ def processByte(hexValue):
                 flagTextSource = 1
                 return
 
-        if nthByteTextSource == lengthSource:
-            print(lineSource)
+        if nthByteSource < CNT_BYTES_CNT_SPACES:
+            return
+
+        if nthByteSource == CNT_BYTES_CNT_SPACES:
+            cnt_initial_spaces = int(hexValue, 16)
+            return
+
+        if nthByteTextSource == (lengthSource - 1):
+            if re.match("^<<EOF>>", lineSource):
+                sys.exit(0)
+            print(' '*cnt_initial_spaces + lineSource)
             lineSource = ""
             flagFirstLineSource = 0
+            return
+
+        if nthByteTextSource > (lengthSource - 1):
+            markBeginLine = hexValue
+            lengthSource = int(hexValue, 16)
+            nthByteSource = -1
+            nthByteTextSource = -1
+            return
 
         if flagTextSource == 1:
             intValue = int(hexValue, 16)
