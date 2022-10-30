@@ -20,7 +20,7 @@ def printUsage():
 
 
 def processArguments(argv):
-    nameFileObject = 'C:\\Projects\\MUCAM\\Cajas\\Documentacion\\req_15003\\Temp\\rein-tik.acu_test'
+    nameFileObject = 'C:\\Projects\\acu2cbl\\samples\\sample001.acu'
     return nameFileObject
 """
     try:
@@ -97,11 +97,9 @@ def positionBeginingOfCode(fileObject):
             return
 
 def printCodeLine(codeLine):
-    # 3
-    # -5
-    line = ''
-    index = 2
-    while (index <= len(codeLine) - 5):
+    index = 3
+    line = ' ' * codeLine[2]
+    while (index <= len(codeLine) - 6):
         line = line + chr(codeLine[index])
         index = index + 1
     print(line)
