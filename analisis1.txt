@@ -1,0 +1,22 @@
+b6b500 1540
+
+27 20 000000 7f0000 07 identification division.
+20 1e 000001 7f0000 08 program-id. sample001.
+1e 09 000002 7f0000 00 0d
+09 16 000003 7f0000 07 data division.
+16 20 000004 7f0000 08 working-storage section.
+20 17 000005 7f0000 09 77 tecla pic x.
+17 09 000006 7f0000 00 0d
+
+09 1b 000007 7f0000 07 procedure division.				1c -1 = 1b
+1b 1e 000008 000003 08 begin-program section.				1f -1 = 1e
+1e 1a 000009 000004 0b move 'A' to tecla.					1b -1 = 1a
+1a 1d 00000a 00000a 08 main-program section.				1e -1 = 1d
+1d 22 00000b 00000e 0b accept tecla line 1 col 1.			23 -1 = 22
+22 22 00000c 00001e 0b accept tecla line 1 col 1.			23 -1 = 22
+22 22 00000d 00002e 0b accept tecla line 1 col 1.			23 -1 = 22
+
+22 22 009b6e 09b63e 0b accept tecla line 1 col 1.
+22 1c 009b6f 09b64e 08 end-program section.
+
+00 09 df 1e
