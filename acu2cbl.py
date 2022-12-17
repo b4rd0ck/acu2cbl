@@ -53,7 +53,10 @@ def findBeginningMarkCodeObject(fileObject):
         byteObject = fileObject.read(1)
 
 def positionAtBeginningOfCode(fileObject, objectCodeMark):
-    
+    bytesCodeBeginning = []
+
+    byteObject = fileObject.read(1)
+    while byte
 
 def main():
     objectCodeMark = []
