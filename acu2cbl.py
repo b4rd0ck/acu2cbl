@@ -4,16 +4,9 @@ import sys
 import re
 
 # constants
-IDENTIFICATION_DIVISION = 'IDENTIFICATIONDIVISION'
-LINE_BEGIN = '7f'
-POS_MARK1_BEGIN_SOURCE = 6
-POS_MARK2_BEGIN_SOURCE = 7
-POS_MARK3_BEGIN_SOURCE = 8
-
-# global variables
-mark1BeginOfCode = 0
-mark2BeginOfCode = 0
-mark3BeginOfCode = 0
+IDENTIFICATION_DIVISION = 'IDENTIFICATION DIVISION'
+START_POSITION_BEGINNING_CODE_MARK = 7
+END_POSITION_BEGINNING_CODE_MARK = 9
 
 def printUsage():
     print("\n\nUsage: acu2cbl -o <object cobol> or acu2cbl --object=<object cobol>\n")
@@ -44,80 +37,26 @@ def processArguments(argv):
     return nameFileObject
 """
 
-def isAlphabetic(ordByte):
-    if (ord('A') <= ordByte and ordByte <= ord('Z')) or \
-       (ord('a') <= ordByte and ordByte <= ord('z')):
-        return True
-    else:
-        return False
+def findBeginningMarkCodeObject(fileObject):
+    objectCodeMark = []
 
-def isLineBegin(byte):
-    if byte.hex() == LINE_BEGIN:
-        return True
-    else:
-        return False
+    numberOfByte = 0
+    byteObject = fileObject.read(1)
+    while byteObject:
+        numberOfByte += 1
 
-def defineBeginingOfCode(fileObject):
-    global mark1BeginOfCode
-    global mark2BeginOfCode
-    global mark3BeginOfCode
+        if START_POSITION_BEGINNING_CODE_MARK <= numberOfByte and numberOfByte <= END_POSITION_BEGINNING_CODE_MARK:
+            objectCodeMark.append(byteObject)
+            if objectCodeMark.__len__() == 3:
+                return objectCodeMark
 
-    byteIndex = 0
-    while (byte := fileObject.read(1)):
-        if byteIndex == POS_MARK1_BEGIN_SOURCE:
-            mark1BeginOfCode = "{0:02x}".format(ord(byte))
-        else:
-            if byteIndex == POS_MARK2_BEGIN_SOURCE:
-                mark2BeginOfCode = "{0:02x}".format(ord(byte))
-            else:
-                if byteIndex == POS_MARK3_BEGIN_SOURCE:
-                    mark3BeginOfCode = "{0:02x}".format(ord(byte))
-                    return
-        byteIndex = byteIndex + 1
+        byteObject = fileObject.read(1)
 
-def positionBeginingOfCode(fileObject):
-    byte1 = ''
-    byte2 = ''
-    byte3 = ''
-    while (byte := fileObject.read(1)):
-        byteHex = "{0:02x}".format(ord(byte))
-        if byte1 == '':
-            byte1 = byteHex
-        else:
-            if byte2 == '':
-                byte2 = byteHex
-            else:
-                if byte3 == '':
-                    byte3 = byteHex
-                else:
-                    byte1 = byte2
-                    byte2 = byte3
-                    byte3 = byteHex
-        if byte1 == mark1BeginOfCode and byte2 == mark2BeginOfCode and byte3 == mark3BeginOfCode:
-            return
-
-def printCodeLine(codeLine):
-    index = 3
-    line = ' ' * codeLine[2]
-    while (index <= len(codeLine) - 6):
-        line = line + chr(codeLine[index])
-        index = index + 1
-    print(line)
-
-def parseSourceFromObject(fileObject):
-    defineBeginingOfCode(fileObject)
-    positionBeginingOfCode(fileObject)
-
-    codeLine = []
-    while (byte := fileObject.read(1)):
-        if isLineBegin(byte):
-            if len(codeLine) > 0:
-                printCodeLine(codeLine)
-                codeLine = []
-        else:
-            codeLine.append(ord(byte))
+def positionAtBeginningOfCode(fileObject, objectCodeMark):
+    
 
 def main():
+    objectCodeMark = []
     nameFileObject = processArguments(sys.argv[1:])
 
     try:
@@ -126,7 +65,8 @@ def main():
         print("\nError trying to open file: ", nameFileObject, "\n")
         sys.exit(4)
 
-    parseSourceFromObject(fileObject)
+    objectCodeMark = findBeginningMarkCodeObject(fileObject)
+
 
     try:
         fileObject.close()
