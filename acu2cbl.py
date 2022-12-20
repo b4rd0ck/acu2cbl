@@ -1,10 +1,7 @@
-import binascii
 import getopt
 import sys
-import re
 
 # constants
-IDENTIFICATION_DIVISION = 'IDENTIFICATION DIVISION'
 START_POSITION_BEGINNING_CODE_MARK = 7
 END_POSITION_BEGINNING_CODE_MARK = 9
 NUMBER_BYTES_CODE_MARK = 3
@@ -13,6 +10,7 @@ def printUsage():
     print("\n\nUsage: acu2cbl -o <object cobol> or acu2cbl --object=<object cobol>\n")
 
 def processArguments(argv):
+    nameFileObject = ''
     try:
         options, arguments = getopt.getopt(argv, "o:", ["object="])
     except getopt.GetoptError as error:
@@ -27,7 +25,7 @@ def processArguments(argv):
             printUsage()
             sys.exit(2)
 
-    if nameFileObject == "":
+    if len(nameFileObject) == 0:
         printUsage()
         sys.exit(3)
 
@@ -77,7 +75,7 @@ def printLineOfCode(lineOfCode):
     for i in range(numberOfSpaces):
         print(' ', end='')
     for character in lineOfCode[1:]:
-        print(character.decode(), end='')
+        print(character.decode('utf-8', 'ignore'), end='')
     print()
 
 def parseObjectCode(fileObject):
@@ -118,9 +116,9 @@ def parseObjectCode(fileObject):
 
         byteObject = fileObject.read(1)
 
-def main():
+def main(argv):
     objectCodeMark = []
-    nameFileObject = processArguments(sys.argv[1:])
+    nameFileObject = processArguments(argv)
 
     try:
         fileObject = open(nameFileObject, 'rb')
@@ -141,5 +139,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
     sys.exit(0)
