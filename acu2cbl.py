@@ -13,7 +13,7 @@ def printUsage():
     print("\n\nUsage: acu2cbl -o <object cobol> or acu2cbl --object=<object cobol>\n")
 
 def processArguments(argv):
-    nameFileObject = 'D:\\Projects\\acu2cbl\\samples\\sample001.acu'
+    nameFileObject = 'C:\\Projects\\acu2cbl\\samples\\sample001.acu'
     return nameFileObject
 """
     try:
@@ -70,10 +70,49 @@ def positionAtBeginningOfCode(fileObject, objectCodeMark):
         byteObject = fileObject.read(1)
     return False
 
+def jumpFillerObjectCode(fileObject):
+    countFillerBytes = 1
+    while countFillerBytes <= 4:
+        fileObject.read(1)
+        countFillerBytes += 1
+
+def printLineOfCode(lineOfCode):
+    line = ''
+    for character in lineOfCode:
+        print(character)
+
 def parseObjectCode(fileObject):
+    lineOfCode = []
+    startOfLine = True
+    bytesNumberOfLine = []
+    bytesFiller = []
+    numberOfSpaces = 0
+
     byteObject = fileObject.read(1)
     while byteObject:
-        print(byteObject.decode('iso-8859-1'))
+        if startOfLine:
+            startByteCodeObject = byteObject
+            startOfLine = False
+            byteObject = fileObject.read(1)
+            continue
+        if len(bytesNumberOfLine) < 3:
+            bytesNumberOfLine.append(byteObject)
+            byteObject = fileObject.read(1)
+            continue
+        if len(bytesFiller) < 3:
+            bytesFiller.append(byteObject)
+            byteObject = fileObject.read(1)
+            continue
+        if byteObject == startByteCodeObject:
+            printLineOfCode(lineOfCode)
+            startOfLine = True
+            bytesNumberOfLine = []
+            bytesFiller = []
+            lineOfCode = []
+            byteObject = fileObject.read(1)
+            continue
+
+        lineOfCode.append(byteObject)
 
         byteObject = fileObject.read(1)
 
@@ -89,6 +128,7 @@ def main():
 
     objectCodeMark = findBeginningMarkCodeObject(fileObject)
     if positionAtBeginningOfCode(fileObject, objectCodeMark):
+        jumpFillerObjectCode(fileObject)
         parseObjectCode(fileObject)
 
     try:
