@@ -1,43 +1,16 @@
-import binascii
 import getopt
 import sys
-import re
 
 # constants
-POS_MARK1_BEGIN_SOURCE = 6
-POS_MARK2_BEGIN_SOURCE = 7
-POS_MARK3_BEGIN_SOURCE = 8
-CNT_BYTES_FIRST_INIT_LINE = 3
-CNT_BYTES_FIRST_CNT_SPACES = 10
-CNT_BYTES_CNT_SPACES = 6
-
-nameFileObject = ""
-fileObject = ""
-byteFileObject = ""
-nthByte = -1
-nthByteSource = -1
-nthByteTextSource = -1
-sourceLine = ""
-markBeginSource = ""
-hexValueAnt0 = ""
-hexValueAnt1 = ""
-hexValueAct = ""
-flagSource = 0
-flagFirstLineSource = 0
-markBeginLine = ""
-cnt_initial_spaces = 0
-lineSource = ""
-lengthSource = 0
-flagTextSource = 0
-
+START_POSITION_BEGINNING_CODE_MARK = 7
+END_POSITION_BEGINNING_CODE_MARK = 9
+NUMBER_BYTES_CODE_MARK = 3
 
 def printUsage():
     print("\n\nUsage: acu2cbl -o <object cobol> or acu2cbl --object=<object cobol>\n")
 
-
 def processArguments(argv):
-    global nameFileObject
-
+    nameFileObject = ''
     try:
         options, arguments = getopt.getopt(argv, "o:", ["object="])
     except getopt.GetoptError as error:
@@ -52,113 +25,100 @@ def processArguments(argv):
             printUsage()
             sys.exit(2)
 
-    if nameFileObject == "":
+    if len(nameFileObject) == 0:
         printUsage()
         sys.exit(3)
 
+    return nameFileObject
 
-def processByte(hexValue):
-    global nthByte
-    global nthByteSource
-    global sourceLine
-    global markBeginSource
-    global hexValueAnt0
-    global hexValueAnt1
-    global hexValueAct
-    global flagSource
-    global flagFirstLineSource
-    global cnt_initial_spaces
-    global markBeginLine
-    global lineSource
-    global lengthSource
-    global flagTextSource
-    global nthByteTextSource
+def findBeginningMarkCodeObject(fileObject):
+    objectCodeMark = []
 
-    nthByte += 1
+    numberOfByte = 0
+    byteObject = fileObject.read(1)
+    while byteObject:
+        numberOfByte += 1
 
-    # identify the beginning of the source
-    if nthByte == POS_MARK1_BEGIN_SOURCE or nthByte == POS_MARK2_BEGIN_SOURCE or nthByte == POS_MARK3_BEGIN_SOURCE:
-        markBeginSource += hexValue
-        return
+        if START_POSITION_BEGINNING_CODE_MARK <= numberOfByte and numberOfByte <= END_POSITION_BEGINNING_CODE_MARK:
+            objectCodeMark.append(byteObject)
+            if len(objectCodeMark) == 3:
+                return objectCodeMark
 
-    hexValueAnt0 = hexValueAnt1
-    hexValueAnt1 = hexValueAct
-    hexValueAct = hexValue
-    # if the two previous and the actual characters match with "markBeginSource" set the
-    # flag "flagSource" to 1
-    if hexValueAnt0 == markBeginSource[0:2] and hexValueAnt1 == markBeginSource[2:4] and hexValueAct == markBeginSource[4:]:
-        flagSource = 1
-        # initialize position of byte in the source
-        nthByteSource = -1
-        # indicate that next line is the first of the source
-        flagFirstLineSource = 1
-        #
-        nthByteTextSource = -1
-        return
+        byteObject = fileObject.read(1)
 
-    # check if it is inside the the source
-    # nthByteSource == -1
-    # nthByteTextSource == -1
-    if flagSource == 1:
-        nthByteSource += 1
-        nthByteTextSource += 1
-        # check if actual line is the first of the source
-        if flagFirstLineSource == 1:
-            # check if position is previous indicator's init first line
-            if nthByteSource < CNT_BYTES_FIRST_INIT_LINE:
-                return
-            # check if position is equal indicator's init first line
-            if nthByteSource == CNT_BYTES_FIRST_INIT_LINE:
-                markBeginLine = hexValue
-                lengthSource = int(hexValue, 16)
-                nthByteTextSource = -1
-                return
-            # check if position is equal indicator's count spaces
-            if nthByteSource == CNT_BYTES_FIRST_CNT_SPACES:
-                cnt_initial_spaces = int(hexValue, 16)
-                flagTextSource = 1
-                return
+def positionAtBeginningOfCode(fileObject, objectCodeMark):
+    bytesCodeBeginning = []
 
-        if nthByteSource < CNT_BYTES_CNT_SPACES:
-            return
+    byteObject = fileObject.read(1)
+    while byteObject:
+        if len(bytesCodeBeginning) < NUMBER_BYTES_CODE_MARK:
+            bytesCodeBeginning.append(byteObject)
+        else:
+            bytesCodeBeginning[0] = bytesCodeBeginning[1]
+            bytesCodeBeginning[1] = bytesCodeBeginning[2]
+            bytesCodeBeginning[2] = byteObject
+        if bytesCodeBeginning[0] == objectCodeMark[0] and \
+           bytesCodeBeginning[1] == objectCodeMark[1] and \
+           bytesCodeBeginning[2] == objectCodeMark[2]:
+            return True
+        byteObject = fileObject.read(1)
+    return False
 
-        if nthByteSource == CNT_BYTES_CNT_SPACES:
-            cnt_initial_spaces = int(hexValue, 16)
-            return
+def jumpFillerObjectCode(fileObject):
+    countFillerBytes = 1
+    while countFillerBytes <= 3:
+        fileObject.read(1)
+        countFillerBytes += 1
 
-        if nthByteTextSource == (lengthSource - 1):
-            if re.match("^<<EOF>>", lineSource):
-                sys.exit(0)
-            print(' '*cnt_initial_spaces + lineSource)
-            lineSource = ""
-            flagFirstLineSource = 0
-            return
+def printLineOfCode(lineOfCode):
+    numberOfSpaces = int.from_bytes(lineOfCode[0], 'little')
+    for i in range(numberOfSpaces):
+        print(' ', end='')
+    for character in lineOfCode[1:]:
+        print(character.decode('utf-8', 'ignore'), end='')
+    print()
 
-        if nthByteTextSource > (lengthSource - 1):
-            markBeginLine = hexValue
-            lengthSource = int(hexValue, 16)
-            nthByteSource = -1
-            nthByteTextSource = -1
-            return
+def parseObjectCode(fileObject):
+    lineOfCode = []
+    startOfLine = True
+    bytesNumberOfLine = []
+    bytesFiller = []
+    lengthOfCode = 0
+    numberOfByte = 0
 
-        if flagTextSource == 1:
-            intValue = int(hexValue, 16)
-            lineSource += chr(intValue)
+    byteObject = fileObject.read(1)
+    while byteObject:
+        numberOfByte += 1
+        if startOfLine:
+            lengthOfCode = int.from_bytes(byteObject, byteorder='little')
+            numberOfByte = 0
+            startOfLine = False
+            byteObject = fileObject.read(1)
+            continue
+        if len(bytesNumberOfLine) < 3:
+            bytesNumberOfLine.append(byteObject)
+            byteObject = fileObject.read(1)
+            continue
+        if len(bytesFiller) < 3:
+            bytesFiller.append(byteObject)
+            byteObject = fileObject.read(1)
+            continue
+        if numberOfByte == lengthOfCode:
+            printLineOfCode(lineOfCode)
+            startOfLine = True
+            bytesNumberOfLine = []
+            bytesFiller = []
+            lineOfCode = []
+            byteObject = fileObject.read(1)
+            continue
 
+        lineOfCode.append(byteObject)
 
-def main():
-    global nameFileObject
-    global fileObject
-    global byteFileObject
-    global nthByte
-    global sourceLine
-    global hexValueAnt
-    global hexValueAct
-    global flagSource
+        byteObject = fileObject.read(1)
 
-    value = ""
-
-    processArguments(sys.argv[1:])
+def main(argv):
+    objectCodeMark = []
+    nameFileObject = processArguments(argv)
 
     try:
         fileObject = open(nameFileObject, 'rb')
@@ -166,17 +126,10 @@ def main():
         print("\nError trying to open file: ", nameFileObject, "\n")
         sys.exit(4)
 
-    nthByte = -1
-    sourceLine = ""
-    hexValueAnt = ""
-    hexValueAct = ""
-    flagSource = 0
-    byteFileObject = fileObject.read(1)
-    while len(byteFileObject) > 0:
-        hexValue = "{0:02x}".format(ord(byteFileObject))
-        processByte(hexValue)
-        #print(value, "--->", hex(ord(byteFileObject)))
-        byteFileObject = fileObject.read(1)
+    objectCodeMark = findBeginningMarkCodeObject(fileObject)
+    if positionAtBeginningOfCode(fileObject, objectCodeMark):
+        jumpFillerObjectCode(fileObject)
+        parseObjectCode(fileObject)
 
     try:
         fileObject.close()
@@ -186,5 +139,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
     sys.exit(0)
