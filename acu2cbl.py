@@ -13,9 +13,6 @@ def printUsage():
     print("\n\nUsage: acu2cbl -o <object cobol> or acu2cbl --object=<object cobol>\n")
 
 def processArguments(argv):
-    nameFileObject = 'C:\\Projects\\acu2cbl\\samples\\sample001.acu'
-    return nameFileObject
-"""
     try:
         options, arguments = getopt.getopt(argv, "o:", ["object="])
     except getopt.GetoptError as error:
@@ -35,7 +32,6 @@ def processArguments(argv):
         sys.exit(3)
 
     return nameFileObject
-"""
 
 def findBeginningMarkCodeObject(fileObject):
     objectCodeMark = []
@@ -72,26 +68,32 @@ def positionAtBeginningOfCode(fileObject, objectCodeMark):
 
 def jumpFillerObjectCode(fileObject):
     countFillerBytes = 1
-    while countFillerBytes <= 4:
+    while countFillerBytes <= 3:
         fileObject.read(1)
         countFillerBytes += 1
 
 def printLineOfCode(lineOfCode):
-    line = ''
-    for character in lineOfCode:
-        print(character)
+    numberOfSpaces = int.from_bytes(lineOfCode[0], 'little')
+    for i in range(numberOfSpaces):
+        print(' ', end='')
+    for character in lineOfCode[1:]:
+        print(character.decode(), end='')
+    print()
 
 def parseObjectCode(fileObject):
     lineOfCode = []
     startOfLine = True
     bytesNumberOfLine = []
     bytesFiller = []
-    numberOfSpaces = 0
+    lengthOfCode = 0
+    numberOfByte = 0
 
     byteObject = fileObject.read(1)
     while byteObject:
+        numberOfByte += 1
         if startOfLine:
-            startByteCodeObject = byteObject
+            lengthOfCode = int.from_bytes(byteObject, byteorder='little')
+            numberOfByte = 0
             startOfLine = False
             byteObject = fileObject.read(1)
             continue
@@ -103,7 +105,7 @@ def parseObjectCode(fileObject):
             bytesFiller.append(byteObject)
             byteObject = fileObject.read(1)
             continue
-        if byteObject == startByteCodeObject:
+        if numberOfByte == lengthOfCode:
             printLineOfCode(lineOfCode)
             startOfLine = True
             bytesNumberOfLine = []
